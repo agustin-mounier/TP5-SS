@@ -42,15 +42,6 @@ public class Beeman {
         particle.velX = correctedVelX;
         particle.velY = correctedVelY;
 
-//        if(Math.abs(correctedVelX) > 10) {
-//            System.out.println("-------");
-//            System.out.println(particle);
-//            for (Particle particle : f.getNeighbours()) {
-//                System.out.println(particle);
-//            }
-//            System.out.println("-------");
-//        }
-
         prevAcelX = aX;
         prevAcelY = aY;
 

@@ -23,13 +23,11 @@ public class SiloGranularSimulation {
 
     static final double BELOW_SPACE = 1;
 
-    double wallWidth;
-
     List<Particle> particles;
 
     int id = 1;
     double tf;
-    double dt = 0.0000005;
+    double dt = 0.000001;
     int fpsModule = (int) (1 / dt) / 60;
 
     boolean open = true;
@@ -39,7 +37,6 @@ public class SiloGranularSimulation {
         this.L = L;
         this.W = W;
         this.D = D;
-        wallWidth = D / 5;
         this.tf = tf;
         integrationMethod = new HashMap<>();
         locateParticles(maxParticles);
@@ -48,7 +45,7 @@ public class SiloGranularSimulation {
     public void run() {
         double currentTime = 0;
 
-        CellIndexMethod CIM = new CellIndexMethod(L + BELOW_SPACE, D / 4, particles, false);
+        CellIndexMethod CIM = new CellIndexMethod(L + BELOW_SPACE, D / 5, particles, false);
         int iteration = 0;
         while (currentTime < tf) {
             if (iteration % fpsModule == 0) {
@@ -112,20 +109,25 @@ public class SiloGranularSimulation {
 
     private void relocateParticle(Particle p) {
         double x, y;
+        int tries = 0;
         do {
             x = Math.random() * (this.W - 2 * p.getRadius()) + p.getRadius();
-            y = BELOW_SPACE + Math.random() * (this.L - L / 2) + L / 2;
-        } while (overlap(x, p.getY(), p.getRadius()));
+            y = BELOW_SPACE + L - (2 * p.getRadius()) + ((tries/10) * 2 * p.getRadius());
+            tries++;
+        } while (overlap(x, y, p.getRadius()));
         p.setX(x);
         p.setY(y);
         p.setVelX(0);
         p.setVelY(0);
-        integrationMethod.get(p).reset();
+        GranularForce gf = new GranularForce(p, null);
+        Beeman beeman = new Beeman(gf, dt);
+        integrationMethod.put(p, beeman);
     }
+
 
     private boolean overlap(double x, double y, double r) {
         for (Particle p : particles) {
-            if (getDistance(p.getX(), p.getY(), x, y) < (1.5 * p.getRadius() + r))
+            if (getDistance(p.getX(), p.getY(), x, y) < (p.getRadius() + r))
                 return true;
         }
         return false;
@@ -152,8 +154,17 @@ public class SiloGranularSimulation {
             return new Particle(id++, -p.getRadius(), p.getY(), 0, 0, p.getRadius(), MASS);
         } else if (p.getY() - p.getRadius() < BELOW_SPACE) {
             if (open) {
-                if (p.getX() <= (W - D) / 2 || p.getX() >= ((W - D) / 2) + D)
-                    return new Particle(id++, p.getX(), BELOW_SPACE - p.getRadius(), 0, 0, p.getRadius(), MASS);
+                if (Math.abs(p.getY() - (BELOW_SPACE)) < p.getRadius()) {
+                    if (p.getX() <= (W / 2 - D / 2) || p.getX() >= (W / 2 + D / 2)) {
+                        return new Particle(id++,p.getX(), (BELOW_SPACE) - p.getRadius(), 0,0,p.getRadius(), p.getMass());
+                    } else if (p.getX() - p.getRadius() <= (W / 2 - D / 2) && getDistance(p.getX(), p.getY(),
+                            (W / 2 - D / 2), (BELOW_SPACE)) < p.getRadius()) {
+                         return new Particle(id++,(W / 2 - D / 2), (BELOW_SPACE ),0, 0,p.getRadius(),p.getMass());
+                    } else if (p.getX() + p.getRadius() >= (W / 2 + D / 2) && getDistance(p.getX(), p.getY(),
+                            (W / 2 + D / 2), (BELOW_SPACE )) < p.getRadius()) {
+                        return new Particle(id++, (W / 2 + D / 2),(BELOW_SPACE ),0, 0,p.getRadius(),p.getMass());
+                    }
+                }
             } else {
                 return new Particle(id++, p.getX(), BELOW_SPACE - p.getRadius(), 0, 0, p.getRadius(), MASS);
             }
@@ -171,7 +182,7 @@ public class SiloGranularSimulation {
     }
 
     public static void main(String[] args) {
-        SiloGranularSimulation SGM = new SiloGranularSimulation(2, 1, 0.2, 100, 5);
+        SiloGranularSimulation SGM = new SiloGranularSimulation(5, 2, 1, 100, 5);
 
         SGM.run();
     }
