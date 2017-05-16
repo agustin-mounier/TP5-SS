@@ -1,4 +1,4 @@
-package integrationMethod;
+package IntegrationMethod;
 
 /**
  * Created by amounier on 4/21/17.

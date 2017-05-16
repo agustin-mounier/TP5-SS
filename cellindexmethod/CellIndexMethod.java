@@ -1,6 +1,6 @@
-package cellindexmethod;
+package CellIndexMethod;
 
-import integrationMethod.Particle;
+import IntegrationMethod.Particle;
 
 import java.util.*;
 import java.util.HashSet;

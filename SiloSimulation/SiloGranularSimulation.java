@@ -1,9 +1,9 @@
 package SiloSimulation;
 
-import cellindexmethod.CellIndexMethod;
-import integrationMethod.Beeman;
-import integrationMethod.GranularForce;
-import integrationMethod.Particle;
+import CellIndexMethod.CellIndexMethod;
+import IntegrationMethod.Beeman;
+import IntegrationMethod.GranularForce;
+import IntegrationMethod.Particle;
 
 import java.util.*;
 
@@ -27,11 +27,16 @@ public class SiloGranularSimulation {
 
     int id = 1;
     double tf;
-    double dt = 0.000001;
+    double dt = 0.0000015;
     int fpsModule = (int) (1 / dt) / 60;
+
+    int secondsModule = (int) (1 / dt);
 
     boolean open = true;
     Map<Particle, Beeman> integrationMethod;
+
+    int particlesFlowCount;
+    int particlesFlowCountGlobal;
 
     public SiloGranularSimulation(double L, double W, double D, int maxParticles, double tf) {
         this.L = L;
@@ -49,7 +54,8 @@ public class SiloGranularSimulation {
         int iteration = 0;
         while (currentTime < tf) {
             if (iteration % fpsModule == 0) {
-                printStateForOvito(iteration / fpsModule, particles);
+//                printMeanParticlesEnergy();
+                printState(iteration / fpsModule, particles);
             }
             CIM.reloadMatrix(particles);
 
@@ -66,14 +72,25 @@ public class SiloGranularSimulation {
                 if (p.getY() < BELOW_SPACE / 2) {
                     relocateParticle(p);
                 }
+                if (p.getY() < BELOW_SPACE && !p.isOut()) {
+                    p.setOut(true);
+
+                    particlesFlowCount++;
+                    particlesFlowCountGlobal++;
+                }
+
                 nextGen.add(p);
             }
-
+            if (iteration % secondsModule == 0) {
+//                System.out.println("Flow: " + particlesFlowCount + " particles/s");
+                particlesFlowCount = 0;
+            }
             this.particles = nextGen;
             currentTime += dt;
             iteration++;
         }
 
+//        System.out.println("Global Flow: " + particlesFlowCountGlobal / 5.0 + " particles/s");
 
     }
 
@@ -95,7 +112,7 @@ public class SiloGranularSimulation {
                     flag = false;
                     break;
                 }
-            } while (overlap(x, y, diameter / 2));
+            } while (isOverlaped(x, y, diameter / 2));
             if (flag) {
                 Particle p = new Particle(id++, x, y, 0, 0, diameter / 2, MASS);
                 GranularForce gf = new GranularForce(p, null);
@@ -112,20 +129,21 @@ public class SiloGranularSimulation {
         int tries = 0;
         do {
             x = Math.random() * (this.W - 2 * p.getRadius()) + p.getRadius();
-            y = BELOW_SPACE + L - (2 * p.getRadius()) + ((tries/10) * 2 * p.getRadius());
+            y = BELOW_SPACE + L - (2 * p.getRadius()) + ((tries / 10) * 2 * p.getRadius());
             tries++;
-        } while (overlap(x, y, p.getRadius()));
+        } while (isOverlaped(x, y, p.getRadius()));
         p.setX(x);
         p.setY(y);
         p.setVelX(0);
         p.setVelY(0);
+        p.setOut(false);
         GranularForce gf = new GranularForce(p, null);
         Beeman beeman = new Beeman(gf, dt);
         integrationMethod.put(p, beeman);
     }
 
 
-    private boolean overlap(double x, double y, double r) {
+    private boolean isOverlaped(double x, double y, double r) {
         for (Particle p : particles) {
             if (getDistance(p.getX(), p.getY(), x, y) < (p.getRadius() + r))
                 return true;
@@ -154,15 +172,15 @@ public class SiloGranularSimulation {
             return new Particle(id++, -p.getRadius(), p.getY(), 0, 0, p.getRadius(), MASS);
         } else if (p.getY() - p.getRadius() < BELOW_SPACE) {
             if (open) {
-                if (Math.abs(p.getY() - (BELOW_SPACE)) < p.getRadius()) {
+                if (Math.abs(p.getY() - BELOW_SPACE) < p.getRadius()) {
                     if (p.getX() <= (W / 2 - D / 2) || p.getX() >= (W / 2 + D / 2)) {
-                        return new Particle(id++,p.getX(), (BELOW_SPACE) - p.getRadius(), 0,0,p.getRadius(), p.getMass());
+                        return new Particle(id++, p.getX(), BELOW_SPACE - p.getRadius(), 0, 0, p.getRadius(), p.getMass());
                     } else if (p.getX() - p.getRadius() <= (W / 2 - D / 2) && getDistance(p.getX(), p.getY(),
-                            (W / 2 - D / 2), (BELOW_SPACE)) < p.getRadius()) {
-                         return new Particle(id++,(W / 2 - D / 2), (BELOW_SPACE ),0, 0,p.getRadius(),p.getMass());
+                            (W / 2 - D / 2), BELOW_SPACE) < p.getRadius()) {
+                        return new Particle(id++, (W / 2 - D / 2), BELOW_SPACE, 0, 0, p.getRadius(), p.getMass());
                     } else if (p.getX() + p.getRadius() >= (W / 2 + D / 2) && getDistance(p.getX(), p.getY(),
-                            (W / 2 + D / 2), (BELOW_SPACE )) < p.getRadius()) {
-                        return new Particle(id++, (W / 2 + D / 2),(BELOW_SPACE ),0, 0,p.getRadius(),p.getMass());
+                            (W / 2 + D / 2), BELOW_SPACE) < p.getRadius()) {
+                        return new Particle(id++, (W / 2 + D / 2), BELOW_SPACE, 0, 0, p.getRadius(), p.getMass());
                     }
                 }
             } else {
@@ -172,7 +190,7 @@ public class SiloGranularSimulation {
         return null;
     }
 
-    public void printStateForOvito(int iteration, List<Particle> particles) {
+    public void printState(int iteration, List<Particle> particles) {
 
         System.out.println(N);
         System.out.println(iteration);
@@ -181,8 +199,23 @@ public class SiloGranularSimulation {
         }
     }
 
+    public void printMeanParticlesEnergy() {
+        double ret = 0;
+        for (Particle particle : particles) {
+            ret += (1 / 2.0) * particle.getMass() * (Math.pow(particle.getVelX(), 2) + Math.pow(particle.getVelY(), 2));
+        }
+        System.out.println(ret / particles.size());
+    }
+
     public static void main(String[] args) {
-        SiloGranularSimulation SGM = new SiloGranularSimulation(5, 2, 1, 100, 5);
+
+        int L = 10;
+        int W = 5;
+        int D = 2;
+        int PARTICLES = 100;
+        int SIMULATION_TIME = 15;
+
+        SiloGranularSimulation SGM = new SiloGranularSimulation(L, W, D, PARTICLES, SIMULATION_TIME);
 
         SGM.run();
     }

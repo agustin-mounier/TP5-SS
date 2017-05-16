@@ -1,4 +1,4 @@
-package integrationMethod;
+package IntegrationMethod;
 
 public class Particle {
 
@@ -13,6 +13,7 @@ public class Particle {
     double velY = 0;
 
     boolean isWall = false;
+    boolean isOut = false;
 
     public Particle(int id, double x, double y, double velX, double velY, double radius, double mass) {
         this.id = id;
@@ -94,6 +95,14 @@ public class Particle {
 
     public void setWall(boolean wall) {
         isWall = wall;
+    }
+
+    public boolean isOut() {
+        return isOut;
+    }
+
+    public void setOut(boolean out) {
+        isOut = out;
     }
 
     @Override

@@ -1,6 +1,5 @@
-package integrationMethod;
+package IntegrationMethod;
 
-import java.util.DoubleSummaryStatistics;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -10,8 +9,8 @@ import java.util.Set;
 public class GranularForce {
 
     Particle p;
-    double kn = 1E5;
-    double kt = 2 * kn;
+    private static final double kn = 1E5;
+    private static final double kt = 2 * kn;
     private static final double G = -10;
     private Set<Particle> neighbours;
 
@@ -22,43 +21,43 @@ public class GranularForce {
     }
 
     public double getXForce() {
-        double fX = 0;
-        for (Particle particle : neighbours) {
-            fX += getFN(p, particle) * getENX(p, particle) + getFT(p, particle) * (-(getENY(p, particle)));
+        double fXSum = 0;
+        for (Particle neighbour : neighbours) {
+            fXSum += getFN(p, neighbour) * getENX(p, neighbour) + getFT(p, neighbour) * (-(getENY(p, neighbour)));
         }
 
-        return fX;
+        return fXSum;
     }
 
     public double getYForce() {
-        double fY = p.mass * G;
-        for (Particle particle : neighbours) {
-            fY += getFN(p, particle) * getENY(p, particle) + getFT(p, particle) * getENX(p, particle);
+        double fYSum = p.mass * G;
+        for (Particle neighbour : neighbours) {
+            fYSum += getFN(p, neighbour) * getENY(p, neighbour) + getFT(p, neighbour) * getENX(p, neighbour);
         }
-        return fY;
+        return fYSum;
     }
 
-    private double getENY(Particle p, Particle particle) {
-        return (particle.y - p.y) / getDistance(particle.x, particle.y, p.x, p.y);
+    private double getENY(Particle p1, Particle p2) {
+        return (p2.y - p1.y) / getDistance(p2.x, p2.y, p1.x, p1.y);
     }
 
-    private double getENX(Particle p, Particle particle) {
-        return (particle.x - p.x) / getDistance(particle.x, particle.y, p.x, p.y);
+    private double getENX(Particle p1, Particle p2) {
+        return (p2.x - p1.x) / getDistance(p2.x, p2.y, p1.x, p1.y);
     }
 
-    private double getFN(Particle p, Particle other) {
-        return -kn * getEpsilon(p, other);
+    private double getFN(Particle p1, Particle p2) {
+        return getEpsilon(p1, p2) * -kn;
     }
 
-    private double getFT(Particle p, Particle other) {
-        return -kt * getEpsilon(p, other) * (((p.velX - other.velX) * (-getENY(p, other)))
-                + ((p.velY - other.velY) * (getENX(p, other))));
+    private double getFT(Particle p1, Particle p2) {
+        return -kt * getEpsilon(p1, p2) * (((p1.velX - p2.velX) * (-getENY(p1, p2)))
+                + ((p1.velY - p2.velY) * (getENX(p1, p2))));
     }
 
-    private double getEpsilon(Particle p, Particle other) {
-        double ep = p.radius + other.radius - (getDistance(p.x, p.y, other.x, other.y));
-        if (ep > p.radius || ep > other.radius) {
-            ep = Math.min(p.radius, other.radius) / 2.0;
+    private double getEpsilon(Particle p1, Particle p2) {
+        double ep = p1.radius + p2.radius - (getDistance(p1.x, p1.y, p2.x, p2.y));
+        if (ep > p1.radius || ep > p2.radius) {
+            ep = Math.min(p1.radius, p2.radius) / 2.0;
         }
         return ep;
     }
@@ -69,16 +68,12 @@ public class GranularForce {
 
     public void setNeighbours(Set<Particle> neighbours) {
         Set<Particle> filteredNeighbours = new HashSet<>();
-        for(Particle neighbour : neighbours) {
-            if(getDistance(p.getX(), p.getY(), neighbour.getX(), neighbour.getY()) <= p.getRadius() + neighbour.getRadius()) {
+        for (Particle neighbour : neighbours) {
+            if (getDistance(p.getX(), p.getY(), neighbour.getX(), neighbour.getY()) <= p.getRadius() + neighbour.getRadius()) {
                 filteredNeighbours.add(neighbour);
             }
         }
         this.neighbours = filteredNeighbours;
-    }
-
-    public Set<Particle> getNeighbours() {
-        return neighbours;
     }
 
     public Particle getParticle() {
