@@ -4,7 +4,10 @@ import CellIndexMethod.CellIndexMethod;
 import IntegrationMethod.Beeman;
 import IntegrationMethod.GranularForce;
 import IntegrationMethod.Particle;
+import javafx.util.Pair;
 
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.*;
 
 /**
@@ -24,10 +27,14 @@ public class SiloGranularSimulation {
     static final double BELOW_SPACE = 1;
 
     List<Particle> particles;
+    // Cant particles that went out vs time it went out
+    private static Map<Integer, Double> flowint;
+
+    private static List<Pair<Double, Double>> systemEnergy;
 
     int id = 1;
     double tf;
-    double dt = 0.0000015;
+    double dt = 0.000001;
     int fpsModule = (int) (1 / dt) / 60;
 
     int secondsModule = (int) (1 / dt);
@@ -44,6 +51,8 @@ public class SiloGranularSimulation {
         this.D = D;
         this.tf = tf;
         integrationMethod = new HashMap<>();
+        systemEnergy = new ArrayList<>();
+        flowint = new HashMap<>();
         locateParticles(maxParticles);
     }
 
@@ -54,7 +63,7 @@ public class SiloGranularSimulation {
         int iteration = 0;
         while (currentTime < tf) {
             if (iteration % fpsModule == 0) {
-//                printMeanParticlesEnergy();
+                printMeanParticlesEnergy(currentTime);
                 printState(iteration / fpsModule, particles);
             }
             CIM.reloadMatrix(particles);
@@ -77,6 +86,7 @@ public class SiloGranularSimulation {
 
                     particlesFlowCount++;
                     particlesFlowCountGlobal++;
+                    flowint.put(particlesFlowCountGlobal, currentTime);
                 }
 
                 nextGen.add(p);
@@ -199,12 +209,29 @@ public class SiloGranularSimulation {
         }
     }
 
-    public void printMeanParticlesEnergy() {
+    public void printMeanParticlesEnergy(double t) {
         double ret = 0;
         for (Particle particle : particles) {
             ret += (1 / 2.0) * particle.getMass() * (Math.pow(particle.getVelX(), 2) + Math.pow(particle.getVelY(), 2));
         }
-        System.out.println(ret / particles.size());
+        systemEnergy.add(new Pair(t, ret));
+    }
+
+    private static void printFlowIntoFile(int n) {
+        try{
+            PrintWriter writer = new PrintWriter("flow-"+n+".tsv", "UTF-8");
+            for (Integer i : flowint.keySet()) {
+                writer.println(String.format(Locale.FRENCH, "%.3f",flowint.get(i)) + "\t" + i);
+            }
+            writer.println("------- System Energy --------");
+            for (Pair p : systemEnergy) {
+                writer.println(p.getKey() + "\t" + p.getValue());
+            }
+
+            writer.close();
+        } catch (IOException e) {
+            // do something
+        }
     }
 
     public static void main(String[] args) {
@@ -212,11 +239,12 @@ public class SiloGranularSimulation {
         int L = 10;
         int W = 5;
         int D = 2;
-        int PARTICLES = 100;
-        int SIMULATION_TIME = 15;
+        int PARTICLES = 50;
+        int SIMULATION_TIME = 1;
 
         SiloGranularSimulation SGM = new SiloGranularSimulation(L, W, D, PARTICLES, SIMULATION_TIME);
 
         SGM.run();
+        printFlowIntoFile(PARTICLES);
     }
 }
